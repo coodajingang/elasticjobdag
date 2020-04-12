@@ -23,7 +23,7 @@ public class TestBaseCurator {
 
         client = CuratorFrameworkFactory.builder().connectString(testingServer.getConnectString())
                 .retryPolicy(new RetryOneTime(3000))
-                .namespace(String.format("test%s", System.nanoTime()))
+                .namespace(String.format("test", System.nanoTime()))
                 .build();
         client.start();
         client.blockUntilConnected();

@@ -21,6 +21,7 @@ import io.elasticjob.lite.api.ShardingContext;
 import io.elasticjob.lite.config.JobRootConfiguration;
 import io.elasticjob.lite.event.type.JobExecutionEvent;
 import io.elasticjob.lite.event.type.JobStatusTraceEvent.State;
+import io.elasticjob.lite.exception.DagJobPauseException;
 import io.elasticjob.lite.exception.ExceptionUtil;
 import io.elasticjob.lite.exception.JobExecutionEnvironmentException;
 import io.elasticjob.lite.exception.JobSystemException;
@@ -103,8 +104,15 @@ public abstract class AbstractElasticJobExecutor {
         }
 
         // 增加dag的处理 若是dag 根，则检查进行登记 ；若非根 检查依赖 ； 非dag跳过
-        jobFacade.checkDagJobExecute();
-
+        if (jobFacade.isDagJob()) {
+            try {
+                jobFacade.dagJobGroupCheck();
+                jobFacade.dagJobCheck();
+            } catch (Exception e) {
+                log.error("DAG job {} exception!", jobName, e);
+                return;
+            }
+        }
         ShardingContexts shardingContexts = jobFacade.getShardingContexts();
         if (shardingContexts.isAllowSendJobEvent()) {
             jobFacade.postJobStatusTraceEvent(shardingContexts.getTaskId(), State.TASK_STAGING, String.format("Job '%s' execute begin.", jobName));

@@ -8,7 +8,7 @@
     
     <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>ERROR</level>
+            <level>DEBUG</level>
         </filter>
         <encoder charset="${log.charset}">
             <pattern>${log.pattern}</pattern>
@@ -19,9 +19,9 @@
         <appender-ref ref="STDOUT" />
     </root>
 
-    <logger name="org.apache.curator.framework.recipes.leader.LeaderSelector" level="OFF" />
-    <logger name="io.elasticjob.lite.event.rdb.JobEventRdbConfiguration" level="OFF" />
-    <logger name="io.elasticjob.lite.event.JobEventBus" level="OFF" />
-    <logger name="io.elasticjob.lite.executor.handler.impl.DefaultJobExceptionHandler" level="OFF" />
-    <logger name="io.elasticjob.lite.internal.monitor.MonitorService" level="OFF" />
+    <logger name="org.apache.curator.framework.recipes.leader.LeaderSelector" level="DEBUG" />
+    <logger name="io.elasticjob.lite.event.rdb.JobEventRdbConfiguration" level="DEBUG" />
+    <logger name="io.elasticjob.lite.event.JobEventBus" level="DEBUG" />
+    <logger name="io.elasticjob.lite.executor.handler.impl.DefaultJobExceptionHandler" level="DEBUG" />
+    <logger name="io.elasticjob.lite.internal.monitor.MonitorService" level="DEBUG" />
 </configuration>

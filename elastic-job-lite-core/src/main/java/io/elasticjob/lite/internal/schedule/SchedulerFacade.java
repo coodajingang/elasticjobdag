@@ -45,7 +45,9 @@ import java.util.Optional;
 public final class SchedulerFacade {
     
     private final String jobName;
-    
+    private final String groupName;
+
+
     private final ConfigurationService configService;
     
     private final LeaderService leaderService;
@@ -78,6 +80,7 @@ public final class SchedulerFacade {
         reconcileService = new ReconcileService(regCenter, jobName);
 
         dagService = null;
+        groupName = null;
     }
     
     public SchedulerFacade(final CoordinatorRegistryCenter regCenter, final String jobName, final List<ElasticJobListener> elasticJobListeners) {
@@ -90,9 +93,10 @@ public final class SchedulerFacade {
         executionService = new ExecutionService(regCenter, jobName);
         monitorService = new MonitorService(regCenter, jobName);
         reconcileService = new ReconcileService(regCenter, jobName);
-        listenerManager = new ListenerManager(regCenter, jobName, elasticJobListeners);
 
         dagService = null;
+        groupName = null;
+        listenerManager = new ListenerManager(regCenter, jobName, elasticJobListeners, groupName);
     }
 
     public SchedulerFacade(final CoordinatorRegistryCenter regCenter, final String jobName, final List<ElasticJobListener> elasticJobListeners, final LiteJobConfiguration liteJobConfig) {
@@ -105,14 +109,18 @@ public final class SchedulerFacade {
         executionService = new ExecutionService(regCenter, jobName);
         monitorService = new MonitorService(regCenter, jobName);
         reconcileService = new ReconcileService(regCenter, jobName);
-        listenerManager = new ListenerManager(regCenter, jobName, elasticJobListeners);
 
         Optional<JobDagConfig> optionalJobDagConfig = Optional.ofNullable(getJobDagConfig(liteJobConfig));
         if (optionalJobDagConfig.isPresent()) {
             dagService = new DagService(regCenter, jobName, optionalJobDagConfig.get());
+            groupName = dagService.getGroupName();
         } else {
             dagService = null;
+            groupName = null;
         }
+
+        listenerManager = new ListenerManager(regCenter, jobName, elasticJobListeners, groupName);
+
     }
 
     private JobDagConfig getJobDagConfig(final LiteJobConfiguration liteJobConfig) {

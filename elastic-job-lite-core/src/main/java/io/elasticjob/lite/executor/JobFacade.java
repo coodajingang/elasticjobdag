@@ -140,5 +140,9 @@ public interface JobFacade {
      */
     void postJobStatusTraceEvent(String taskId, State state, String message);
 
-    void checkDagJobExecute();
+    boolean isDagJob();
+
+    void dagJobGroupCheck();
+
+    void dagJobCheck();
 }

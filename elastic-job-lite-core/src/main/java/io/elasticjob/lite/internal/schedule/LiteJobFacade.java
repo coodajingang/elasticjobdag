@@ -19,27 +19,36 @@ package io.elasticjob.lite.internal.schedule;
 
 import com.google.common.base.Strings;
 import io.elasticjob.lite.api.listener.ElasticJobListener;
+import io.elasticjob.lite.config.JobCoreConfiguration;
 import io.elasticjob.lite.config.LiteJobConfiguration;
 import io.elasticjob.lite.config.dataflow.DataflowJobConfiguration;
 import io.elasticjob.lite.context.TaskContext;
+import io.elasticjob.lite.dag.DagJobStates;
+import io.elasticjob.lite.dag.DagService;
+import io.elasticjob.lite.dag.JobDagConfig;
 import io.elasticjob.lite.event.JobEventBus;
 import io.elasticjob.lite.event.type.JobExecutionEvent;
 import io.elasticjob.lite.event.type.JobStatusTraceEvent;
 import io.elasticjob.lite.event.type.JobStatusTraceEvent.Source;
 import io.elasticjob.lite.event.type.JobStatusTraceEvent.State;
+import io.elasticjob.lite.exception.DagJobPauseException;
+import io.elasticjob.lite.exception.DagJobStateException;
 import io.elasticjob.lite.exception.JobExecutionEnvironmentException;
 import io.elasticjob.lite.executor.JobFacade;
 import io.elasticjob.lite.executor.ShardingContexts;
 import io.elasticjob.lite.internal.config.ConfigurationService;
+import io.elasticjob.lite.internal.election.LeaderService;
 import io.elasticjob.lite.internal.failover.FailoverService;
 import io.elasticjob.lite.internal.sharding.ExecutionContextService;
 import io.elasticjob.lite.internal.sharding.ExecutionService;
 import io.elasticjob.lite.internal.sharding.ShardingService;
 import io.elasticjob.lite.reg.base.CoordinatorRegistryCenter;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * 为作业提供内部服务的门面类.
@@ -58,10 +67,12 @@ public final class LiteJobFacade implements JobFacade {
     private final ExecutionService executionService;
     
     private final FailoverService failoverService;
-    
+
     private final List<ElasticJobListener> elasticJobListeners;
     
     private final JobEventBus jobEventBus;
+
+    private DagService dagService;
     
     public LiteJobFacade(final CoordinatorRegistryCenter regCenter, final String jobName, final List<ElasticJobListener> elasticJobListeners, final JobEventBus jobEventBus) {
         configService = new ConfigurationService(regCenter, jobName);
@@ -71,8 +82,32 @@ public final class LiteJobFacade implements JobFacade {
         failoverService = new FailoverService(regCenter, jobName);
         this.elasticJobListeners = elasticJobListeners;
         this.jobEventBus = jobEventBus;
+        dagService = null;
     }
-    
+
+    public LiteJobFacade(final CoordinatorRegistryCenter regCenter, final String jobName, final List<ElasticJobListener> elasticJobListeners, final JobEventBus jobEventBus, final LiteJobConfiguration liteJobConfig) {
+        configService = new ConfigurationService(regCenter, jobName);
+        shardingService = new ShardingService(regCenter, jobName);
+        executionContextService = new ExecutionContextService(regCenter, jobName);
+        executionService = new ExecutionService(regCenter, jobName);
+        failoverService = new FailoverService(regCenter, jobName);
+        this.elasticJobListeners = elasticJobListeners;
+        this.jobEventBus = jobEventBus;
+        Optional<JobDagConfig> optionalJobDagConfig = Optional.ofNullable(getJobDagConfig(liteJobConfig));
+        if (optionalJobDagConfig.isPresent()) {
+            dagService = new DagService(regCenter, jobName, optionalJobDagConfig.get());
+        } else {
+            dagService = null;
+        }
+    }
+
+    private JobDagConfig getJobDagConfig(final LiteJobConfiguration liteJobConfig) {
+        JobCoreConfiguration coreConfig = liteJobConfig.getTypeConfig().getCoreConfig();
+        if (coreConfig != null && coreConfig.getJobDagConfig() != null && StringUtils.isNotEmpty(coreConfig.getJobDagConfig().getDagGroup())) {
+            return coreConfig.getJobDagConfig();
+        }
+        return null;
+    }
     @Override
     public LiteJobConfiguration loadJobRootConfiguration(final boolean fromCache) {
         return configService.load(fromCache);
@@ -183,13 +218,34 @@ public final class LiteJobFacade implements JobFacade {
         }
     }
 
-    /**
-     * 1. 检查是否dag job
-     * 2. 对于根 判断是否需要 regraph
-     * 3. 对于非根判断依赖是否ok
-     */
     @Override
-    public void checkDagJobExecute() {
+    public boolean isDagJob() {
+        return dagService.isDagJob();
+    }
 
+    @Override
+    public void dagJobGroupCheck() {
+        if (dagService.getDagStates() == DagJobStates.RUNNING) {
+            return;
+        }
+        if (dagService.getDagStates() == DagJobStates.PAUSE) {
+            throw new DagJobPauseException("Dag Job states PAUSE");
+        }
+        if (dagService.getDagStates() == DagJobStates.INIT || dagService.getDagStates() == DagJobStates.NONE) {
+            dagService.setNeedDagReGraph();
+        }
+
+        dagService.changeGroupStateAndReGraph();
+
+        if (dagService.getDagStates() != DagJobStates.RUNNING) {
+            log.info("DAG job state not right {}", dagService.getDagStates().getValue());
+            throw new DagJobStateException("Dag Job state Not right!");
+        }
+    }
+
+    @Override
+    public void dagJobCheck() {
+        dagService.checkJobDependenciesState();
+        dagService.checkAndChangeJobStateWhenRun();
     }
 }

@@ -18,6 +18,7 @@
 package io.elasticjob.lite.internal.listener;
 
 import io.elasticjob.lite.api.listener.ElasticJobListener;
+import io.elasticjob.lite.dag.DagNodeStorage;
 import io.elasticjob.lite.internal.config.RescheduleListenerManager;
 import io.elasticjob.lite.internal.election.ElectionListenerManager;
 import io.elasticjob.lite.internal.failover.FailoverListenerManager;
@@ -57,6 +58,8 @@ public final class ListenerManager {
     private final GuaranteeListenerManager guaranteeListenerManager;
     
     private final RegistryCenterConnectionStateListener regCenterConnectionStateListener;
+
+    private final DagNodeStorage dagNodeStorage;
     
     public ListenerManager(final CoordinatorRegistryCenter regCenter, final String jobName, final List<ElasticJobListener> elasticJobListeners) {
         jobNodeStorage = new JobNodeStorage(regCenter, jobName);
@@ -69,8 +72,23 @@ public final class ListenerManager {
         rescheduleListenerManager = new RescheduleListenerManager(regCenter, jobName);
         guaranteeListenerManager = new GuaranteeListenerManager(regCenter, jobName, elasticJobListeners);
         regCenterConnectionStateListener = new RegistryCenterConnectionStateListener(regCenter, jobName);
+        dagNodeStorage = null;
     }
-    
+
+    public ListenerManager(final CoordinatorRegistryCenter regCenter, final String jobName, final List<ElasticJobListener> elasticJobListeners, final String groupName) {
+        jobNodeStorage = new JobNodeStorage(regCenter, jobName);
+        electionListenerManager = new ElectionListenerManager(regCenter, jobName);
+        shardingListenerManager = new ShardingListenerManager(regCenter, jobName);
+        failoverListenerManager = new FailoverListenerManager(regCenter, jobName);
+        monitorExecutionListenerManager = new MonitorExecutionListenerManager(regCenter, jobName);
+        shutdownListenerManager = new ShutdownListenerManager(regCenter, jobName);
+        triggerListenerManager = new TriggerListenerManager(regCenter, jobName);
+        rescheduleListenerManager = new RescheduleListenerManager(regCenter, jobName);
+        guaranteeListenerManager = new GuaranteeListenerManager(regCenter, jobName, elasticJobListeners);
+        regCenterConnectionStateListener = new RegistryCenterConnectionStateListener(regCenter, jobName);
+        dagNodeStorage = new DagNodeStorage(regCenter, groupName, jobName);
+    }
+
     /**
      * 开启所有监听器.
      */
@@ -84,5 +102,9 @@ public final class ListenerManager {
         rescheduleListenerManager.start();
         guaranteeListenerManager.start();
         jobNodeStorage.addConnectionStateListener(regCenterConnectionStateListener);
+
+        if (dagNodeStorage != null) {
+            dagNodeStorage.addConnectionStateListener(regCenterConnectionStateListener);
+        }
     }
 }

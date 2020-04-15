@@ -78,7 +78,7 @@ public final class BaseJobBeanDefinitionParserTag {
 
     public static final String DAG_GROUP = "dag-group";
     public static final String DAG_DEPENDENCIES = "dag-dependencies";
-    public static final String DAG_RETRY_REF = "dag-retry-ref";
+    public static final String DAG_RETRY_REF = "dag-retry-class";
     public static final String DAG_RUN_ALONE = "dag-run-alone";
 
 

@@ -143,6 +143,9 @@ public abstract class AbstractJobBeanDefinitionParser extends AbstractBeanDefini
     private BeanDefinition createJobDagConfig(final Element element) {
         BeanDefinitionBuilder jobDagConfig = BeanDefinitionBuilder.rootBeanDefinition(JobDagConfig.class);
         jobDagConfig.addConstructorArgValue(element.getAttribute(BaseJobBeanDefinitionParserTag.DAG_GROUP));
+        jobDagConfig.addConstructorArgValue(element.getAttribute(BaseJobBeanDefinitionParserTag.DAG_DEPENDENCIES));
+        jobDagConfig.addConstructorArgValue(element.getAttribute(BaseJobBeanDefinitionParserTag.DAG_RETRY_REF));
+        jobDagConfig.addConstructorArgValue(element.getAttribute(BaseJobBeanDefinitionParserTag.DAG_RUN_ALONE));
         return jobDagConfig.getBeanDefinition();
     }
 

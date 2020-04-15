@@ -49,7 +49,7 @@
                 <xsd:attribute name="event-trace-rdb-data-source" type="xsd:string" />
                 <xsd:attribute name="dag-group" type="xsd:string" />
                 <xsd:attribute name="dag-dependencies" type="xsd:string" />
-                <xsd:attribute name="dag-retry-ref" type="xsd:string" default="io.elasticjob.lite.dag.DefaultJobDagRetryPolicy" />
+                <xsd:attribute name="dag-retry-class" type="xsd:string" default="io.elasticjob.lite.dag.DefaultJobDagRetryPolicy" />
                 <xsd:attribute name="dag-run-alone" type="xsd:string" default="false" />
             </xsd:extension>
         </xsd:complexContent>

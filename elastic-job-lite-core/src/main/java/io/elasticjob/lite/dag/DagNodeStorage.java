@@ -34,6 +34,8 @@ public class DagNodeStorage {
     private static final String DAG_RUN = "/dag/%s/run";
     private static final String DAG_GRAPH_PROCESS = "/dag/%s/processing";
     private static final String DAG_RUN_JOB_STATES = "/dag/%s/run/%s/states";
+    private static final String DAG_RUN_JOB_FAIL = "/dag/%s/run/%s/failitem";
+    private static final String DAG_RUN_JOB_FAIL_ITEM = "/dag/%s/run/%s/failitem/%s";
     private static final String DAG_RUN_JOB = "/dag/%s/run/%s";
 
 
@@ -45,7 +47,7 @@ public class DagNodeStorage {
     }
 
     /**
-     * 登记 /dag/group/job  value=dependencies comm split
+     * 登记 /dag/group/config/job  value=dependencies comm split
      * @param value
      */
     public void persistDagConfig(String value) {
@@ -53,6 +55,10 @@ public class DagNodeStorage {
             regCenter.update(pathOfDagConfigJob(), value);
         } else {
             regCenter.persist(pathOfDagConfigJob(), value);
+        }
+
+        if (!regCenter.isExisted(pathOfDagStates())) {
+            regCenter.persist(pathOfDagStates(), "");
         }
     }
 
@@ -84,6 +90,12 @@ public class DagNodeStorage {
     private String pathOfDagRunJob(String jobname) {
         return String.format(DAG_RUN_JOB, groupName, jobname);
     }
+    private String pathOfDagRunJobFailItem(String jobname, String item) {
+        return String.format(DAG_RUN_JOB_FAIL_ITEM, groupName, jobname, item);
+    }
+    private String pathOfDagRunJobFail(String jobname) {
+        return String.format(DAG_RUN_JOB_FAIL, groupName, jobname);
+    }
     private String pathOfDagRunJobStates(String jobname) {
         return String.format(DAG_RUN_JOB_STATES, groupName, jobname);
     }
@@ -96,6 +108,34 @@ public class DagNodeStorage {
 
     public void setGroupName(String groupName) {
         this.groupName = groupName;
+    }
+
+    /**
+     * 更新job 运行分片的状态
+     * @param jobname
+     * @param item
+     * @param isSuccess
+     */
+    public void saveDagRunJobFailItems(String jobname, String item, boolean isSuccess, String msg) {
+        String path = pathOfDagRunJobFailItem(jobname, item);
+        boolean isExist = regCenter.isExisted(path);
+        if (isSuccess) {
+            if (isExist) {
+                regCenter.remove(path);
+            }
+        } else {
+            if (!isExist) {
+                regCenter.persist(path, msg);
+            }
+        }
+    }
+
+    /**
+     * 判断当前job 下有无失败的分片
+     * @return
+     */
+    public boolean hasFailItems(String jobName) {
+        return regCenter.getNumChildren(pathOfDagRunJobFail(jobName)) > 0;
     }
 
     /**
@@ -119,6 +159,14 @@ public class DagNodeStorage {
 
     public void updateDagJobStates(String jobname, DagJobStates jobStates) {
         this.regCenter.update(pathOfDagRunJobStates(jobname), jobStates.getValue());
+    }
+
+    public void updateDagJobStates(String jobName) {
+        if (hasFailItems(jobName)) {
+            updateDagJobStates(jobName, DagJobStates.SUCCESS);
+        } else {
+            updateDagJobStates(jobName, DagJobStates.FAIL);
+        }
     }
 
     public void setNeedReGraph() {
@@ -277,4 +325,6 @@ public class DagNodeStorage {
             throw new DagJobSysException(ex);
         }
     }
+
+
 }

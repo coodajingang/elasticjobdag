@@ -19,9 +19,13 @@ package io.elasticjob.lite.internal.guarantee;
 
 import io.elasticjob.lite.api.listener.AbstractDistributeOnceElasticJobListener;
 import io.elasticjob.lite.api.listener.ElasticJobListener;
+import io.elasticjob.lite.dag.DagJobStates;
+import io.elasticjob.lite.dag.DagNodeStorage;
 import io.elasticjob.lite.internal.listener.AbstractJobListener;
 import io.elasticjob.lite.internal.listener.AbstractListenerManager;
 import io.elasticjob.lite.reg.base.CoordinatorRegistryCenter;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
 import org.apache.curator.framework.recipes.cache.TreeCacheEvent.Type;
 
 import java.util.List;
@@ -31,18 +35,39 @@ import java.util.List;
  * 
  * @author zhangliang
  */
+@Slf4j
 public final class GuaranteeListenerManager extends AbstractListenerManager {
     
     private final GuaranteeNode guaranteeNode;
     
     private final List<ElasticJobListener> elasticJobListeners;
+
+    private final String groupName;
+    private final String jobName;
+    private final DagNodeStorage dagNodeStorage;
     
     public GuaranteeListenerManager(final CoordinatorRegistryCenter regCenter, final String jobName, final List<ElasticJobListener> elasticJobListeners) {
         super(regCenter, jobName);
         this.guaranteeNode = new GuaranteeNode(jobName);
         this.elasticJobListeners = elasticJobListeners;
+        this.groupName = null;
+        this.jobName = jobName;
+        this.dagNodeStorage = null;
     }
-    
+
+    public GuaranteeListenerManager(final CoordinatorRegistryCenter regCenter, final String jobName, final List<ElasticJobListener> elasticJobListeners, final String groupName) {
+        super(regCenter, jobName);
+        this.guaranteeNode = new GuaranteeNode(jobName);
+        this.elasticJobListeners = elasticJobListeners;
+        this.groupName = groupName;
+        this.jobName = jobName;
+        if (StringUtils.isNotEmpty(this.groupName)) {
+            this.dagNodeStorage = new DagNodeStorage(regCenter, groupName, jobName);
+        } else {
+            this.dagNodeStorage = null;
+        }
+    }
+
     @Override
     public void start() {
         addDataListener(new StartedNodeRemovedJobListener());
@@ -72,6 +97,12 @@ public final class GuaranteeListenerManager extends AbstractListenerManager {
                     if (each instanceof AbstractDistributeOnceElasticJobListener) {
                         ((AbstractDistributeOnceElasticJobListener) each).notifyWaitingTaskComplete();
                     }
+                }
+
+                // job 完成事件 判断是否dag ，是的化更新 为完成
+                if (StringUtils.isNotEmpty(groupName)) {
+                    log.debug("Job Completed, is DAG {} job-{}", groupName, jobName);
+                    dagNodeStorage.updateDagJobStates(jobName);
                 }
             }
         }

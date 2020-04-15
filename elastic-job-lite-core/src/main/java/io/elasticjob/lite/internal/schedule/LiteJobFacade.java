@@ -37,7 +37,6 @@ import io.elasticjob.lite.exception.JobExecutionEnvironmentException;
 import io.elasticjob.lite.executor.JobFacade;
 import io.elasticjob.lite.executor.ShardingContexts;
 import io.elasticjob.lite.internal.config.ConfigurationService;
-import io.elasticjob.lite.internal.election.LeaderService;
 import io.elasticjob.lite.internal.failover.FailoverService;
 import io.elasticjob.lite.internal.sharding.ExecutionContextService;
 import io.elasticjob.lite.internal.sharding.ExecutionService;
@@ -48,6 +47,7 @@ import org.apache.commons.lang3.StringUtils;
 
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -141,7 +141,19 @@ public final class LiteJobFacade implements JobFacade {
             failoverService.updateFailoverComplete(shardingContexts.getShardingItemParameters().keySet());
         }
     }
-    
+
+    @Override
+    public void registerJobCompleted(final ShardingContexts shardingContexts, Map<Integer, String> itemErrorMessages) {
+        if (dagService.isDagJob()) {
+            // 说明有分片执行失败 注册到zk中
+            dagService.regDagJobShardingItemsStatus(shardingContexts, itemErrorMessages);
+        }
+        executionService.registerJobCompleted(shardingContexts);
+        if (configService.load(true).isFailover()) {
+            failoverService.updateFailoverComplete(shardingContexts.getShardingItemParameters().keySet());
+        }
+    }
+
     @Override
     public ShardingContexts getShardingContexts() {
         boolean isFailover = configService.load(true).isFailover();
@@ -220,7 +232,7 @@ public final class LiteJobFacade implements JobFacade {
 
     @Override
     public boolean isDagJob() {
-        return dagService.isDagJob();
+        return dagService != null  && dagService.isDagJob();
     }
 
     @Override

@@ -8,6 +8,7 @@ import io.elasticjob.lite.config.JobTypeConfiguration;
 import io.elasticjob.lite.exception.DagJobCycleException;
 import io.elasticjob.lite.exception.DagJobStateException;
 import io.elasticjob.lite.exception.DagJobSuccessException;
+import io.elasticjob.lite.executor.ShardingContexts;
 import io.elasticjob.lite.internal.election.LeaderService;
 import io.elasticjob.lite.internal.sharding.ShardingNode;
 import io.elasticjob.lite.reg.base.CoordinatorRegistryCenter;
@@ -100,7 +101,7 @@ public class DagService {
         if (jobDagConfig == null || jobDagConfig.getDagDependencies() == null) {
             return "";
         }
-        return StringUtils.join(jobDagConfig.getDagDependencies(), ",");
+        return jobDagConfig.getDagDependencies();
     }
 
     /**
@@ -246,5 +247,20 @@ public class DagService {
 
     public String getGroupName() {
         return groupName;
+    }
+
+    /**
+     * 分片执行成功 error 信息登记
+     * @param shardingContexts
+     * @param itemErrorMessages
+     */
+    public void regDagJobShardingItemsStatus(final ShardingContexts shardingContexts, final Map<Integer, String> itemErrorMessages) {
+        shardingContexts.getShardingItemParameters().forEach((k,v) -> {
+            if (itemErrorMessages.containsKey(k)) {
+                dagNodeStorage.saveDagRunJobFailItems(jobName, String.valueOf(k), false, v);
+            } else {
+                dagNodeStorage.saveDagRunJobFailItems(jobName, String.valueOf(k), true, "");
+            }
+        });
     }
 }

@@ -23,6 +23,7 @@ import io.elasticjob.lite.event.type.JobStatusTraceEvent.State;
 import io.elasticjob.lite.exception.JobExecutionEnvironmentException;
 
 import java.util.Collection;
+import java.util.Map;
 
 /**
  * 作业内部服务门面服务.
@@ -64,7 +65,8 @@ public interface JobFacade {
      * @param shardingContexts 分片上下文
      */
     void registerJobCompleted(ShardingContexts shardingContexts);
-    
+    void registerJobCompleted(ShardingContexts shardingContexts, Map<Integer, String> itemErrorMessages);
+
     /**
      * 获取当前作业服务器的分片上下文.
      *

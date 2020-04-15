@@ -29,6 +29,7 @@ import io.elasticjob.lite.config.JobTypeConfiguration;
 import io.elasticjob.lite.config.dataflow.DataflowJobConfiguration;
 import io.elasticjob.lite.config.script.ScriptJobConfiguration;
 import io.elasticjob.lite.config.simple.SimpleJobConfiguration;
+import io.elasticjob.lite.dag.JobDagConfig;
 import io.elasticjob.lite.executor.handler.JobProperties;
 
 import java.io.IOException;
@@ -56,6 +57,7 @@ public abstract class AbstractJobConfigurationGsonTypeAdapter<T extends JobRootC
         boolean misfire = failover;
         String description = "";
         JobProperties jobProperties = new JobProperties();
+        JobDagConfig jobDagConfig = null;
         JobType jobType = null;
         String jobClass = "";
         boolean streamingProcess = false;
@@ -104,6 +106,9 @@ public abstract class AbstractJobConfigurationGsonTypeAdapter<T extends JobRootC
                 case "scriptCommandLine":
                     scriptCommandLine = in.nextString();
                     break;
+                case "jobDagConfig":
+                    jobDagConfig = newJobDagConfig(in);
+                    break;
                 default:
                     addToCustomizedValueMap(jsonName, in, customizedValueMap);
                     break;
@@ -111,11 +116,39 @@ public abstract class AbstractJobConfigurationGsonTypeAdapter<T extends JobRootC
         }
         in.endObject();
         JobCoreConfiguration coreConfig = getJobCoreConfiguration(jobName, cron, shardingTotalCount, shardingItemParameters,
-                jobParameter, failover, misfire, description, jobProperties);
+                jobParameter, failover, misfire, description, jobProperties, jobDagConfig);
         JobTypeConfiguration typeConfig = getJobTypeConfiguration(coreConfig, jobType, jobClass, streamingProcess, scriptCommandLine);
         return getJobRootConfiguration(typeConfig, customizedValueMap);
     }
-    
+
+    private JobDagConfig newJobDagConfig(final JsonReader in) throws IOException {
+        JobDagConfig config = new JobDagConfig();
+        in.beginObject();
+        while (in.hasNext()) {
+            switch (in.nextName()) {
+                case "dagGroup":
+                    config.setDagGroup(in.nextString());
+                    break;
+                case "dagDependencies":
+                    config.setDagDependencies(in.nextString());
+                    break;
+                case "retryClass":
+                    config.setRetryClass(in.nextString());
+                    break;
+                case "dagRunAlone":
+                    config.setDagRunAlone(in.nextBoolean());
+                    break;
+                case "dagSkipWhenFail":
+                    config.setDagSkipWhenFail(in.nextBoolean());
+                    break;
+                default:
+                    break;
+            }
+        }
+        in.endObject();
+        return config;
+    }
+
     private JobProperties getJobProperties(final JsonReader in) throws IOException {
         JobProperties result = new JobProperties();
         in.beginObject();
@@ -140,11 +173,12 @@ public abstract class AbstractJobConfigurationGsonTypeAdapter<T extends JobRootC
     private JobCoreConfiguration getJobCoreConfiguration(final String jobName, final String cron, final int shardingTotalCount,
                                                          final String shardingItemParameters, final String jobParameter, final boolean failover,
                                                          final boolean misfire, final String description,
-                                                         final JobProperties jobProperties) {
+                                                         final JobProperties jobProperties, final JobDagConfig jobDagConfig) {
         return JobCoreConfiguration.newBuilder(jobName, cron, shardingTotalCount)
                 .shardingItemParameters(shardingItemParameters).jobParameter(jobParameter).failover(failover).misfire(misfire).description(description)
                 .jobProperties(JobProperties.JobPropertiesEnum.JOB_EXCEPTION_HANDLER.getKey(), jobProperties.get(JobProperties.JobPropertiesEnum.JOB_EXCEPTION_HANDLER))
                 .jobProperties(JobProperties.JobPropertiesEnum.EXECUTOR_SERVICE_HANDLER.getKey(), jobProperties.get(JobProperties.JobPropertiesEnum.EXECUTOR_SERVICE_HANDLER))
+                .jobDagProperties(jobDagConfig)
                 .build();
     }
     
@@ -181,6 +215,12 @@ public abstract class AbstractJobConfigurationGsonTypeAdapter<T extends JobRootC
         out.name("misfire").value(value.getTypeConfig().getCoreConfig().isMisfire());
         out.name("description").value(value.getTypeConfig().getCoreConfig().getDescription());
         out.name("jobProperties").jsonValue(value.getTypeConfig().getCoreConfig().getJobProperties().json());
+        if (value.getTypeConfig().getCoreConfig().getJobDagConfig() != null) {
+            out.name("jobDagConfig").beginObject();
+            wirteDagJobConfig(out, value.getTypeConfig().getCoreConfig().getJobDagConfig());
+            out.endObject();
+        }
+
         if (value.getTypeConfig().getJobType() == JobType.DATAFLOW) {
             DataflowJobConfiguration dataflowJobConfig = (DataflowJobConfiguration) value.getTypeConfig();
             out.name("streamingProcess").value(dataflowJobConfig.isStreamingProcess());
@@ -191,6 +231,16 @@ public abstract class AbstractJobConfigurationGsonTypeAdapter<T extends JobRootC
         writeCustomized(out, value);
         out.endObject();
     }
-    
+
+    protected void wirteDagJobConfig(JsonWriter out, JobDagConfig jobDagConfig) throws IOException{
+        //out.beginObject();
+        out.name("dagGroup").value(jobDagConfig.getDagGroup());
+        out.name("dagDependencies").value(jobDagConfig.getDagDependencies());
+        out.name("retryClass").value(jobDagConfig.getRetryClass());
+        out.name("dagRunAlone").value(jobDagConfig.isDagRunAlone());
+        out.name("dagSkipWhenFail").value(jobDagConfig.isDagSkipWhenFail());
+        //out.endObject();
+    }
+
     protected abstract void writeCustomized(JsonWriter out, T value) throws IOException;
 }

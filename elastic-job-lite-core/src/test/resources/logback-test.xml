@@ -19,9 +19,11 @@
         <appender-ref ref="STDOUT" />
     </root>
 
-    <logger name="org.apache.curator.framework.recipes.leader.LeaderSelector" level="DEBUG" />
-    <logger name="io.elasticjob.lite.event.rdb.JobEventRdbConfiguration" level="DEBUG" />
+    <logger name="org.apache.curator.framework.recipes.leader.LeaderSelector" level="INFO" />
+    <logger name="io.elasticjob.lite.event.rdb.JobEventRdbConfiguration" level="info" />
     <logger name="io.elasticjob.lite.event.JobEventBus" level="DEBUG" />
     <logger name="io.elasticjob.lite.executor.handler.impl.DefaultJobExceptionHandler" level="DEBUG" />
     <logger name="io.elasticjob.lite.internal.monitor.MonitorService" level="DEBUG" />
+    <logger name="org.apache.zookeeper" level="info" />
+    <logger name="org.apache.zookeeper" level="info" />
 </configuration>

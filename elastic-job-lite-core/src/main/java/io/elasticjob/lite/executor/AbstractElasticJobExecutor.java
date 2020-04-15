@@ -163,7 +163,7 @@ public abstract class AbstractElasticJobExecutor {
             process(shardingContexts, executionSource);
         } finally {
             // TODO 考虑增加作业失败的状态，并且考虑如何处理作业失败的整体回路
-            jobFacade.registerJobCompleted(shardingContexts);
+            jobFacade.registerJobCompleted(shardingContexts, itemErrorMessages);
             if (itemErrorMessages.isEmpty()) {
                 if (shardingContexts.isAllowSendJobEvent()) {
                     jobFacade.postJobStatusTraceEvent(taskId, State.TASK_FINISHED, "");

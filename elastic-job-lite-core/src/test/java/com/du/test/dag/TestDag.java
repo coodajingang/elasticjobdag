@@ -17,6 +17,9 @@ public class TestDag extends TestBaseCurator {
         DagService dagService = new DagService(null, "132", new JobDagConfig());
         System.out.println("normal");
         Map<String, Set<String>> stringSetMap = genNormalDagMap();
+        stringSetMap.forEach((k,v) -> {
+            System.out.println(k + " " + v);
+        });
         System.out.println(stringSetMap.size());
         dagService.checkCycle(stringSetMap);
         System.out.println(stringSetMap.size());

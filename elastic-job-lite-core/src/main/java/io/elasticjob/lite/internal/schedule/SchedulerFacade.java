@@ -188,6 +188,8 @@ public final class SchedulerFacade {
      * @param liteJobConfigFromRegCenter
      */
     public void updateJobDagConfiguration(LiteJobConfiguration liteJobConfigFromRegCenter) {
-        dagService.regDagConfig();
+        if (dagService != null) {
+            dagService.regDagConfig();
+        }
     }
 }

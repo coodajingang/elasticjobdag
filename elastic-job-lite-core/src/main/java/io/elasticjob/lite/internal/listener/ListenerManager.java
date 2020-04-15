@@ -84,9 +84,9 @@ public final class ListenerManager {
         shutdownListenerManager = new ShutdownListenerManager(regCenter, jobName);
         triggerListenerManager = new TriggerListenerManager(regCenter, jobName);
         rescheduleListenerManager = new RescheduleListenerManager(regCenter, jobName);
-        guaranteeListenerManager = new GuaranteeListenerManager(regCenter, jobName, elasticJobListeners);
         regCenterConnectionStateListener = new RegistryCenterConnectionStateListener(regCenter, jobName);
         dagNodeStorage = new DagNodeStorage(regCenter, groupName, jobName);
+        guaranteeListenerManager = new GuaranteeListenerManager(regCenter, jobName, elasticJobListeners, groupName);
     }
 
     /**
